@@ -1,3 +1,16 @@
+substitutions:
+  room_temp_entity: sensor.ac2_temperature
+  room_humidity_entity: sensor.ac2_humidity
+  target_temp_entity: sensor.target_temp
+  external_temp_entity: sensor.demo_external_temperature
+  weather_icon_entity: sensor.weather_condition_number
+  cool_off_icon_entity: sensor.thermo_cool_off_number
+  thermo_state_entity: sensor.thermo_state
+  date_entity: sensor.date
+  time_entity: sensor.time
+  cool_off_text_entity: sensor.thermo_cool_off
+  fan_mode_entity: sensor.fan_mode
+
 esphome:
   name: thermostat
   friendly_name: thermostat
@@ -41,48 +54,48 @@ uart:
 sensor:
   - platform: homeassistant   # Room temperature
     id: temp1
-    entity_id: sensor.ac2_temperature
+    entity_id: ${room_temp_entity}
 
   - platform: homeassistant   # Room humidity
     id: hum1
-    entity_id: sensor.ac2_humidity
+    entity_id: ${room_humidity_entity}
 
   - platform: homeassistant   # Target temperature (setpoint)
     id: t_temp1
-    entity_id: sensor.target_temp
+    entity_id: ${target_temp_entity}
 
   - platform: homeassistant   # External temperature (optional)
     id: ext_temp1
-    entity_id: sensor.demo_external_temperature
+    entity_id: ${external_temp_entity}
 
   - platform: homeassistant   # Weather icon number (used to set Nextion picture)
     id: today_icon
-    entity_id: sensor.weather_condition_number
+    entity_id: ${weather_icon_entity}
 
   - platform: homeassistant   # Cool/Off icon number
     id: cool_off_number1
-    entity_id: sensor.thermo_cool_off_number
+    entity_id: ${cool_off_icon_entity}
 
 text_sensor:
   - platform: homeassistant   # AC state text (ex: "Cooling", "Off")
     id: state1
-    entity_id: sensor.thermo_state
+    entity_id: ${thermo_state_entity}
 
   - platform: homeassistant   # Date
     id: date1
-    entity_id: sensor.date
+    entity_id: ${date_entity}
 
   - platform: homeassistant   # Time
     id: time1
-    entity_id: sensor.time
+    entity_id: ${time_entity}
 
   - platform: homeassistant   # "Cool" or "Off" label
     id: cool_off1
-    entity_id: sensor.thermo_cool_off
+    entity_id: ${cool_off_text_entity}
 
   - platform: homeassistant   # Fan mode label
     id: fan_mode1
-    entity_id: sensor.fan_mode
+    entity_id: ${fan_mode_entity}
 
 # Touch events from Nextion buttons -> call Home Assistant scripts
 # IMPORTANT: these scripts must exist in Home Assistant (scripts.yaml)
@@ -196,13 +209,6 @@ binary_sensor:
         - homeassistant.service:
             service: script.fanhigh1
 
-globals:
-  - id: first_page
-    type: bool
-    restore_value: no
-  - id: current_brightness
-    type: int
-
 display:
   - platform: nextion
     id: thermo_screen
@@ -210,13 +216,44 @@ display:
     brightness: 25%
     update_interval: 1s
     lambda: |-
-      id(thermo_screen).set_component_text_printf("page00.t0","%.1f C",id(t_temp1).state);
-      id(thermo_screen).set_component_text_printf("page00.t1","%.1f C",id(temp1).state);
-      id(thermo_screen).set_component_text_printf("page00.t3","%.1f C",id(ext_temp1).state);
-      id(thermo_screen).set_component_text("page00.t4",id(date1).state.c_str());
-      id(thermo_screen).set_component_text("page00.t6",id(time1).state.c_str());
-      id(thermo_screen).send_command_printf("%s.pic=%.0f","page00.p2",id(today_icon).state);
-      id(thermo_screen).send_command_printf("%s.pic=%.0f","page00.p0",id(cool_off_number1).state);
-      id(thermo_screen).set_component_text_printf("page00.t2","%.0f %%", id(hum1).state);
-      id(thermo_screen).set_component_text_printf("page04.t0", "%s", id(cool_off1).state.c_str());
-      id(thermo_screen).set_component_text_printf("page04.t1", "%s", id(fan_mode1).state.c_str());
+      auto &screen = id(thermo_screen);
+
+      if (!isnan(id(t_temp1).state)) {
+        screen.set_component_text_printf("page00.t0", "%.1f C", id(t_temp1).state);
+      }
+
+      if (!isnan(id(temp1).state)) {
+        screen.set_component_text_printf("page00.t1", "%.1f C", id(temp1).state);
+      }
+
+      if (!isnan(id(ext_temp1).state)) {
+        screen.set_component_text_printf("page00.t3", "%.1f C", id(ext_temp1).state);
+      }
+
+      if (!id(date1).state.empty()) {
+        screen.set_component_text("page00.t4", id(date1).state.c_str());
+      }
+
+      if (!id(time1).state.empty()) {
+        screen.set_component_text("page00.t6", id(time1).state.c_str());
+      }
+
+      if (!isnan(id(today_icon).state)) {
+        screen.send_command_printf("%s.pic=%.0f", "page00.p2", id(today_icon).state);
+      }
+
+      if (!isnan(id(cool_off_number1).state)) {
+        screen.send_command_printf("%s.pic=%.0f", "page00.p0", id(cool_off_number1).state);
+      }
+
+      if (!isnan(id(hum1).state)) {
+        screen.set_component_text_printf("page00.t2", "%.0f %%", id(hum1).state);
+      }
+
+      if (!id(cool_off1).state.empty()) {
+        screen.set_component_text_printf("page04.t0", "%s", id(cool_off1).state.c_str());
+      }
+
+      if (!id(fan_mode1).state.empty()) {
+        screen.set_component_text_printf("page04.t1", "%s", id(fan_mode1).state.c_str());
+      }

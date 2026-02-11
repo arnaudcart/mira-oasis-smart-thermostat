@@ -1,3 +1,6 @@
+substitutions:
+  room_temperature_entity: sensor.room_temperature
+
 esphome:
   name: ac-ir-21
   friendly_name: AC IR 21
@@ -38,7 +41,7 @@ captive_portal:
 # IR transmitter configuration
 # Tip: Use a transistor + resistor to drive the IR LED for better range
 remote_transmitter:
-  id: ACIRTrans
+  id: ac_ir_transmitter
   pin:
     number: GPIO04
   carrier_duty_percent: 25%
@@ -47,8 +50,8 @@ remote_transmitter:
 # This sensor is typically published by Zigbee2MQTT
 sensor:
   - platform: homeassistant
-    id: ACIR21
-    entity_id: sensor.room_temperature   # CHANGE THIS to your own sensor
+    id: room_temp
+    entity_id: ${room_temperature_entity}
     internal: true
     filters:
       - throttle: 10s
@@ -60,18 +63,18 @@ sensor:
     on_value:
       then:
         - remote_transmitter.transmit_midea:
-            transmitter_id: ACIRTrans
+            transmitter_id: ac_ir_transmitter
             code: !lambda |-
               // NOTE
               // This byte sequence is model/protocol specific.
               // The +1 temperature offset is intentional (tested with Midea).
-              return {0xA4, 0x82, 0x48, 0x7F, (uint8_t)(id(ACIR21).state + 1)};
+              return {0xA4, 0x82, 0x48, 0x7F, (uint8_t)(id(room_temp).state + 1)};
 
 # IR climate controller (Midea)
 climate:
   - platform: midea_ir
     name: "IR21"
-    sensor: ACIR21
+    sensor: room_temp
     supports_heat: false
     visual:
       min_temperature: 18.0 °C
