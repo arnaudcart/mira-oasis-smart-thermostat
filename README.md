@@ -1,4 +1,4 @@
-# ESPHome Nextion IR Thermostat
+# Mira Oasis Smart Thermostat
 
 A wall-mounted, touchscreen-based thermostat built with ESPHome and Home Assistant.
 
